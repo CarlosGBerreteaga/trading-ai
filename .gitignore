@@ -13,7 +13,7 @@ build/
 dist/
 *.egg-info/
 
-# Data / artifacts (keep what you truly want tracked)
+# Data / artifacts
 data/*.parquet
 data/*_backtest.csv
 models/
