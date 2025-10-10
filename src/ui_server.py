@@ -96,6 +96,12 @@ class RecommendRequest(BaseModel):
     min_hold_days: int = Field(default=252, ge=1, le=504)
     max_tickers: int = Field(default=50, ge=1, le=500)
     top: int = Field(default=25, ge=1, le=100)
+    min_trading_days: int = Field(
+        default=504,
+        ge=0,
+        le=2520,
+        description="Skip recommendations whose backtests span fewer trading days than this threshold.",
+    )
     data_dir: Path = Field(default=DEFAULT_DATA_DIR)
     models_dir: Path = Field(default=DEFAULT_MODELS_DIR)
     ticker_cache: Path = Field(default=DEFAULT_TICKER_CACHE)
@@ -249,6 +255,7 @@ def run_recommend_job(job_id: str, request: RecommendRequest) -> None:
                 min_hold_days=request.min_hold_days,
                 data_dir=str(request.data_dir),
                 models_dir=str(request.models_dir),
+                min_trading_days=request.min_trading_days,
             )
             results.to_csv(request.output, index=False)
         ok_results = results[results["status"] == "ok"].copy()
@@ -617,6 +624,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           </label>
           <label>Min Hold (days)
             <input type="number" name="min_hold_days" value="252" min="1" max="504" required>
+          </label>
+          <label>Min Trading Days
+            <input type="number" name="min_trading_days" value="504" min="0" max="2520" required>
           </label>
           <label>Max Tickers
             <input type="number" name="max_tickers" value="50" min="1" max="500" required>

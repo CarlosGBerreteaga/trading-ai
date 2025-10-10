@@ -63,7 +63,7 @@ def evaluate_tickers(
     min_hold_days: int,
     data_dir: str,
     models_dir: str,
-    min_trading_days: int,
+    min_trading_days: int = 0,
 ) -> pd.DataFrame:
     records: List[dict] = []
     for idx, symbol in enumerate(symbols, start=1):

@@ -30,6 +30,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data", type=Path, default=Path("data"), help="Directory for downloaded data.")
     parser.add_argument("--models", type=Path, default=Path("models"), help="Directory for trained models.")
     parser.add_argument(
+        "--min-trading-days",
+        type=int,
+        default=504,
+        help="Discard recommendations whose backtests span fewer trading days than this threshold (default: 504).",
+    )
+    parser.add_argument(
         "--ticker-cache",
         type=Path,
         default=Path("sp500_tickers.txt"),
@@ -120,6 +126,7 @@ def main() -> None:
         min_hold_days=args.min_hold_days,
         data_dir=str(args.data),
         models_dir=str(args.models),
+        min_trading_days=args.min_trading_days,
     )
 
     successful = results[results["status"] == "ok"].copy()
