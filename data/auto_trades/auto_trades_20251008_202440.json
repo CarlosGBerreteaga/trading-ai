@@ -1,0 +1,51 @@
+{
+  "timestamp": "20251008_202440",
+  "top": [
+    {
+      "symbol": "ABBV",
+      "status": "ok",
+      "equity": 2.8909525846887876,
+      "total_return_pct": 189.09525846887877,
+      "CAGR": 0.1255444590984025,
+      "Sharpe": 0.7480261978289545,
+      "MaxDD": -0.3043091795644822,
+      "Vol": 0.18017255490209425,
+      "backtest_csv": "data\\ABBV_backtest.csv",
+      "alerts_csv": "data\\ABBV_alerts.csv"
+    },
+    {
+      "symbol": "AOS",
+      "status": "ok",
+      "equity": 2.2222568255516952,
+      "total_return_pct": 122.22568255516953,
+      "CAGR": 0.09303709992764864,
+      "Sharpe": 0.5676296413528137,
+      "MaxDD": -0.32042743759971304,
+      "Vol": 0.18757419867156125,
+      "backtest_csv": "data\\AOS_backtest.csv",
+      "alerts_csv": "data\\AOS_alerts.csv"
+    },
+    {
+      "symbol": "ABT",
+      "status": "ok",
+      "equity": 2.085659646259542,
+      "total_return_pct": 108.56596462595421,
+      "CAGR": 0.08533943233737706,
+      "Sharpe": 0.6038315291284025,
+      "MaxDD": -0.20878333153854578,
+      "Vol": 0.15588396906171162,
+      "backtest_csv": "data\\ABT_backtest.csv",
+      "alerts_csv": "data\\ABT_alerts.csv"
+    }
+  ],
+  "trades": {
+    "buy": [
+      "ABBV",
+      "ABT",
+      "AOS"
+    ],
+    "hold": [],
+    "sell": []
+  },
+  "portfolio": "C:\\Users\\carlo\\Documents\\Portfolio Projects\\trading-ai\\portfolio.json"
+}

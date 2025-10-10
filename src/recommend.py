@@ -36,15 +36,21 @@ def fetch_sp500_tickers(source: str = WIKI_URL) -> List[str]:
 
 def load_tickers(ticker_file: Path | None, limit: int | None) -> List[str]:
     if ticker_file and ticker_file.exists():
+        raw = ticker_file.read_text()
+        had_backtick_newlines = "`n" in raw
+        if had_backtick_newlines:
+            raw = raw.replace("`n", "\n")
         tickers = [
             _sanitize_symbol(line)
-            for line in ticker_file.read_text().splitlines()
+            for line in raw.splitlines()
             if line.strip()
         ]
+        if had_backtick_newlines:
+            ticker_file.write_text("\n".join(tickers), encoding="utf-8")
     else:
         tickers = fetch_sp500_tickers()
         if ticker_file:
-            ticker_file.write_text("`n".join(tickers), encoding="utf-8")
+            ticker_file.write_text("\n".join(tickers), encoding="utf-8")
     if limit is not None and limit > 0:
         tickers = tickers[:limit]
     return tickers
@@ -57,6 +63,7 @@ def evaluate_tickers(
     min_hold_days: int,
     data_dir: str,
     models_dir: str,
+    min_trading_days: int,
 ) -> pd.DataFrame:
     records: List[dict] = []
     for idx, symbol in enumerate(symbols, start=1):
@@ -71,7 +78,9 @@ def evaluate_tickers(
                 models_dir=models_dir,
                 ntfy_topic=None,
             )
-        except Exception as exc:  # pragma: no cover - runtime feedback only
+        except BaseException as exc:  # pragma: no cover - runtime feedback only
+            if isinstance(exc, KeyboardInterrupt):
+                raise
             print(f"    ! Skipping {symbol}: {exc}", file=sys.stderr)
             records.append(
                 {
@@ -81,7 +90,19 @@ def evaluate_tickers(
             )
             continue
 
+        trading_days = int(summary.get("trading_days") or 0)
+        if min_trading_days > 0 and trading_days < min_trading_days:
+            records.append(
+                {
+                    "symbol": symbol,
+                    "status": f"filtered_short_window (<{min_trading_days})",
+                    "trading_days": trading_days,
+                }
+            )
+            continue
+
         stats = summary["stats"]
+        latest_signal = summary.get("latest_signal") or {}
         records.append(
             {
                 "symbol": symbol,
@@ -94,6 +115,12 @@ def evaluate_tickers(
                 "Vol": stats.get("Vol"),
                 "backtest_csv": summary.get("backtest_csv"),
                 "alerts_csv": summary.get("alerts_csv"),
+                "trading_days": trading_days,
+                "latest_action": str(latest_signal.get("action") or "").upper(),
+                "latest_action_date": latest_signal.get("date"),
+                "latest_probability": latest_signal.get("probability"),
+                "latest_signal": latest_signal.get("signal"),
+                "previous_signal": latest_signal.get("previous_signal"),
             }
         )
     df = pd.DataFrame(records)
@@ -112,6 +139,12 @@ def main() -> None:
     parser.add_argument("--max-tickers", type=int, default=25, help="Maximum tickers to evaluate (avoid 500 at once).")
     parser.add_argument("--data", default="data", help="Data directory for CSV/parquet outputs.")
     parser.add_argument("--models", default="models", help="Model directory.")
+    parser.add_argument(
+        "--min-trading-days",
+        type=int,
+        default=504,
+        help="Skip recommendations whose backtest covers fewer trading days than this threshold (default: 504).",
+    )
     parser.add_argument(
         "--ticker-cache",
         type=Path,
@@ -136,6 +169,7 @@ def main() -> None:
         min_hold_days=args.min_hold_days,
         data_dir=args.data,
         models_dir=args.models,
+        min_trading_days=args.min_trading_days,
     )
 
     results.to_csv(args.output, index=False)

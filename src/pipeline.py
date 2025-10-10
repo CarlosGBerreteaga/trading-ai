@@ -16,6 +16,11 @@ except ImportError:  # pragma: no cover
     from features import generate_features
     from train import train_model
 
+try:
+    from .portfolio import DEFAULT_PORTFOLIO_PATH
+except ImportError:  # pragma: no cover
+    from portfolio import DEFAULT_PORTFOLIO_PATH  # type: ignore[no-redef]
+
 
 def _compute_date_range(years: int) -> Dict[str, str]:
     today = pd.Timestamp.today().normalize()
@@ -43,6 +48,8 @@ def run_pipeline(
     ntfy_token: Optional[str] = None,
     ntfy_title: str = "Trading Alert",
     ntfy_priority: Optional[str] = None,
+    portfolio_path: Optional[str] = None,
+    portfolio_update: bool = False,
 ) -> Dict[str, object]:
     if years <= 0:
         raise ValueError("years must be positive")
@@ -84,6 +91,8 @@ def run_pipeline(
         ntfy_token=ntfy_token,
         ntfy_title=ntfy_title,
         ntfy_priority=ntfy_priority,
+        portfolio_path=portfolio_path,
+        portfolio_update=portfolio_update,
     )
 
     equity = backtest_result["equity"]
@@ -96,12 +105,19 @@ def run_pipeline(
         "train_metrics": train_result["metrics"],
         "date_range": date_range,
         "model_path": train_result["model_path"],
-        "backtest_csv": backtest_result["csv_path"]
-,        "alerts_csv": backtest_result["alerts_path"],
+        "backtest_csv": backtest_result["csv_path"],
+        "alerts_csv": backtest_result["alerts_path"],
         "alert_sids": backtest_result["alert_sids"],
         "notification_error": backtest_result["notification_error"],
         "ntfy_status": backtest_result["ntfy_status"],
         "ntfy_error": backtest_result["ntfy_error"],
+        "portfolio_path": backtest_result.get("portfolio_path"),
+        "portfolio_owned_before": backtest_result.get("portfolio_owned_before"),
+        "portfolio_owned_after": backtest_result.get("portfolio_owned_after"),
+        "trade_summary": backtest_result.get("trade_summary"),
+        "trades": backtest_result.get("trades"),
+        "latest_signal": backtest_result.get("latest_signal"),
+        "trading_days": backtest_result.get("trading_days"),
     }
 
     print("\n=== Pipeline Summary ===")
@@ -109,6 +125,11 @@ def run_pipeline(
     print(f"Model path: {summary['model_path']}")
     print(f"Backtest CSV: {summary['backtest_csv']}")
     print(f"Alerts CSV: {summary['alerts_csv']}")
+    if summary["portfolio_path"]:
+        print(
+            f"Portfolio file: {summary['portfolio_path']} "
+            f"(owned before={summary['portfolio_owned_before']}, after={summary['portfolio_owned_after']})"
+        )
     if notify_phone:
         if summary["alert_sids"]:
             print(f"SMS alerts sent: {len(summary['alert_sids'])}")
@@ -159,6 +180,17 @@ def main() -> None:
     parser.add_argument("--ntfy-token", type=str, default=None)
     parser.add_argument("--ntfy-title", type=str, default="Trading Alert")
     parser.add_argument("--ntfy-priority", type=str, default=None)
+    parser.add_argument(
+        "--portfolio",
+        type=str,
+        default=str(DEFAULT_PORTFOLIO_PATH),
+        help="Path to the portfolio JSON used to filter sell alerts (blank to disable).",
+    )
+    parser.add_argument(
+        "--portfolio-update",
+        action="store_true",
+        help="Automatically update the portfolio JSON when buys/sells trigger.",
+    )
     args = parser.parse_args()
 
     run_pipeline(
@@ -181,6 +213,8 @@ def main() -> None:
         ntfy_token=args.ntfy_token,
         ntfy_title=args.ntfy_title,
         ntfy_priority=args.ntfy_priority,
+        portfolio_path=args.portfolio,
+        portfolio_update=args.portfolio_update,
     )
 
 

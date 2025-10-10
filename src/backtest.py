@@ -2,6 +2,7 @@
 
 import argparse
 import os
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import joblib
@@ -22,6 +23,11 @@ except ImportError:  # pragma: no cover
         NotificationError = RuntimeError  # type: ignore[assignment]
         send_twilio_messages = None  # type: ignore[assignment]
         send_ntfy_messages = None  # type: ignore[assignment]
+
+try:
+    from .portfolio import DEFAULT_PORTFOLIO_PATH, PortfolioState
+except ImportError:  # pragma: no cover
+    from portfolio import DEFAULT_PORTFOLIO_PATH, PortfolioState  # type: ignore[no-redef]
 
 
 def _load_asset_returns(symbol: str, data_dir: str, index: pd.DatetimeIndex) -> pd.Series:
@@ -105,6 +111,8 @@ def run_backtest(
     ntfy_token: Optional[str] = None,
     ntfy_title: str = "Trading Alert",
     ntfy_priority: Optional[str] = None,
+    portfolio_path: Optional[str] = None,
+    portfolio_update: bool = False,
 ) -> Dict[str, object]:
     feat_path = os.path.join(data_dir, f"{symbol}_features.parquet")
     df = pd.read_parquet(feat_path)
@@ -172,8 +180,174 @@ def run_backtest(
         }
     )
     alerts = alerts.dropna(subset=["action"])
+
+    portfolio_state: Optional[PortfolioState] = None
+    portfolio_before: Optional[bool] = None
+    portfolio_after: Optional[bool] = None
+    portfolio_dirty = False
+    portfolio_path_str = str(portfolio_path).strip() if portfolio_path is not None else ""
+    if portfolio_path_str:
+        resolved_path = Path(portfolio_path_str).expanduser()
+        portfolio_state = PortfolioState.load(resolved_path)
+        owned_flag = portfolio_state.is_owned(symbol)
+        portfolio_before = owned_flag
+        keep_idx: List[pd.Timestamp] = []
+        for idx, row in alerts.iterrows():
+            action = row["action"]
+            include = False
+            if action == "BUY":
+                include = True
+                if portfolio_update and portfolio_state is not None:
+                    portfolio_state.set_single(symbol)
+                    owned_flag = True
+                    portfolio_dirty = True
+            elif action == "SELL":
+                if owned_flag:
+                    include = True
+                    if portfolio_update:
+                        portfolio_state.remove([symbol])
+                        owned_flag = False
+                        portfolio_dirty = True
+            if include:
+                keep_idx.append(idx)
+        alerts = alerts.loc[keep_idx]
+        portfolio_after = portfolio_state.is_owned(symbol)
+        if portfolio_update and portfolio_dirty:
+            portfolio_state.save()
+    else:
+        portfolio_state = None
+        portfolio_before = None
+        portfolio_after = None
+
     alerts_path = os.path.join(data_dir, f"{symbol}_alerts.csv")
     alerts.to_csv(alerts_path, index=True)
+
+    trades: List[Dict[str, object]] = []
+    if not alerts.empty:
+        close_series = df["Close"].astype(float) if "Close" in df.columns else None
+        open_trade: Optional[Dict[str, object]] = None
+        for idx, row in alerts.iterrows():
+            action = str(row["action"]).upper()
+            price = float(row["close"])
+            timestamp = pd.Timestamp(idx)
+            if action == "BUY":
+                open_trade = {
+                    "symbol": symbol,
+                    "entry_date": timestamp.to_pydatetime(),
+                    "entry_price": price,
+                }
+            elif action == "SELL" and open_trade is not None:
+                entry_date = pd.Timestamp(open_trade["entry_date"])
+                exit_date = timestamp
+                entry_price = float(open_trade["entry_price"])
+                exit_price = price
+                profit = exit_price - entry_price
+                return_pct = (profit / entry_price * 100.0) if entry_price else 0.0
+                hold_days = max((exit_date - entry_date).days, 0)
+                trades.append(
+                    {
+                        "symbol": symbol,
+                        "entry_date": entry_date.to_pydatetime(),
+                        "exit_date": exit_date.to_pydatetime(),
+                        "entry_price": entry_price,
+                        "exit_price": exit_price,
+                        "profit": profit,
+                        "return_pct": return_pct,
+                        "hold_days": hold_days,
+                    }
+                )
+                open_trade = None
+
+        if open_trade is not None:
+            entry_date = pd.Timestamp(open_trade["entry_date"])
+            entry_price = float(open_trade["entry_price"])
+            exit_date = df.index[-1]
+            if close_series is not None:
+                if exit_date in close_series.index:
+                    exit_price = float(close_series.loc[exit_date])
+                else:
+                    exit_price = float(close_series.iloc[-1])
+            elif "close" in alerts.columns and not alerts["close"].empty:
+                exit_price = float(alerts["close"].iloc[-1])
+            else:
+                exit_price = entry_price
+            profit = exit_price - entry_price
+            return_pct = (profit / entry_price * 100.0) if entry_price else 0.0
+            hold_days = max((exit_date - entry_date).days, 0)
+            trades.append(
+                {
+                    "symbol": symbol,
+                    "entry_date": entry_date.to_pydatetime(),
+                    "exit_date": pd.Timestamp(exit_date).to_pydatetime(),
+                    "entry_price": entry_price,
+                    "exit_price": exit_price,
+                    "profit": profit,
+                    "return_pct": return_pct,
+                    "hold_days": hold_days,
+                }
+            )
+
+    latest_signal_info: Dict[str, object] = {}
+    if not out.empty:
+        latest_idx = out.index[-1]
+        latest_signal = int(out["signal"].iloc[-1])
+        previous_signal = int(out["signal"].iloc[-2]) if len(out) > 1 else latest_signal
+        latest_action = "hold"
+        if latest_signal > previous_signal:
+            latest_action = "BUY"
+        elif latest_signal < previous_signal:
+            latest_action = "SELL"
+        else:
+            latest_action = "HOLD"
+        latest_proba = float(out["proba"].iloc[-1])
+        last_alert_action: Optional[str] = None
+        last_alert_date: Optional[str] = None
+        if not alerts.empty:
+            last_alert_action = str(alerts.iloc[-1]["action"]).upper()
+            last_alert_date = pd.Timestamp(alerts.index[-1]).isoformat()
+        latest_signal_info = {
+            "date": pd.Timestamp(latest_idx).isoformat(),
+            "action": latest_action,
+            "signal": latest_signal,
+            "previous_signal": previous_signal,
+            "probability": latest_proba,
+            "last_alert_action": last_alert_action,
+            "last_alert_date": last_alert_date,
+        }
+
+    if trades:
+        trade_df = pd.DataFrame(trades)
+        total_profit = float(trade_df["profit"].sum())
+        winning = trade_df[trade_df["profit"] > 0]
+        losing = trade_df[trade_df["profit"] <= 0]
+        avg_hold = float(trade_df["hold_days"].mean())
+        trade_summary = {
+            "count": int(len(trade_df)),
+            "wins": int(len(winning)),
+            "losses": int(len(losing)),
+            "win_rate": float(len(winning) / len(trade_df) * 100.0),
+            "avg_profit": float(trade_df["profit"].mean()),
+            "avg_win": float(winning["profit"].mean()) if not winning.empty else 0.0,
+            "avg_loss": float(losing["profit"].mean()) if not losing.empty else 0.0,
+            "total_profit": total_profit,
+            "avg_hold_days": avg_hold,
+            "median_hold_days": float(trade_df["hold_days"].median()),
+            "max_hold_days": int(trade_df["hold_days"].max()),
+        }
+    else:
+        trade_summary = {
+            "count": 0,
+            "wins": 0,
+            "losses": 0,
+            "win_rate": 0.0,
+            "avg_profit": 0.0,
+            "avg_win": 0.0,
+            "avg_loss": 0.0,
+            "total_profit": 0.0,
+            "avg_hold_days": 0.0,
+            "median_hold_days": 0.0,
+            "max_hold_days": 0,
+        }
 
     alert_sids: List[str] = []
     ntfy_status: List[int] = []
@@ -226,6 +400,13 @@ def run_backtest(
         "notification_error": notification_error,
         "ntfy_status": ntfy_status,
         "ntfy_error": ntfy_error,
+        "portfolio_path": str(portfolio_state.path) if portfolio_state else None,
+        "portfolio_owned_before": portfolio_before,
+        "portfolio_owned_after": portfolio_after,
+        "trades": trades,
+        "trade_summary": trade_summary,
+        "trading_days": int(len(out)),
+        "latest_signal": latest_signal_info,
     }
 
 
@@ -253,6 +434,17 @@ def main() -> None:
     parser.add_argument("--ntfy-token", type=str, default=None)
     parser.add_argument("--ntfy-title", type=str, default="Trading Alert")
     parser.add_argument("--ntfy-priority", type=str, default=None)
+    parser.add_argument(
+        "--portfolio",
+        type=str,
+        default=str(DEFAULT_PORTFOLIO_PATH),
+        help="Path to portfolio JSON used for sell filtering.",
+    )
+    parser.add_argument(
+        "--portfolio-update",
+        action="store_true",
+        help="Update the portfolio JSON when buys/sells occur.",
+    )
     args = parser.parse_args()
 
     result = run_backtest(
@@ -278,10 +470,17 @@ def main() -> None:
         ntfy_token=args.ntfy_token,
         ntfy_title=args.ntfy_title,
         ntfy_priority=args.ntfy_priority,
+        portfolio_path=args.portfolio,
+        portfolio_update=args.portfolio_update,
     )
     print(f"Backtest stats: {result['stats']}")
     print(f"Wrote {result['csv_path']}")
     print(f"Alerts CSV: {result['alerts_path']}")
+    if result["portfolio_path"]:
+        print(
+            f"Portfolio file: {result['portfolio_path']} "
+            f"(owned before={result['portfolio_owned_before']}, after={result['portfolio_owned_after']})"
+        )
     if result["alert_sids"]:
         print(f"Sent {len(result['alert_sids'])} SMS alerts")
     if result["notification_error"]:

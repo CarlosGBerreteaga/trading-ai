@@ -1,18 +1,28 @@
-﻿# C:\Users\carlo\Documents\Portfolio Projects\trading-ai\run_pipeline.ps1
-# Launches the trading pipeline with enhanced annual-hold strategy and ntfy notifications.
+﻿# Launch the trading pipeline from PowerShell by delegating to WSL and the shared `.venv-linux`.
 
-$env:NTFY_TOPIC = "trading-ai-spy-alerts"
-$env:NTFY_TOKEN = ""           # Optional bearer token if topic is protected
-$env:TWILIO_ACCOUNT_SID = ""   # Leave blank unless SMS via Twilio is needed
-$env:TWILIO_AUTH_TOKEN = ""
-$env:TWILIO_FROM_NUMBER = ""
+$distribution = "Ubuntu"  # Set to your installed WSL distribution name.
+$projectRootWin = "C:\Users\carlo\Documents\Portfolio Projects\trading-ai"
+$projectRootWSL = "/mnt/c/Users/carlo/Documents/Portfolio Projects/trading-ai"
+$portfolioPathWSL = "$projectRootWSL/portfolio.json"
 
-& "C:\Users\carlo\Documents\Portfolio Projects\trading-ai\.venv\Scripts\python.exe" `
-  "C:\Users\carlo\Documents\Portfolio Projects\trading-ai\src\pipeline.py" `
-  --symbol SPY `
-  --years 20 `
-  --prob-threshold 0.55 `
-  --min-hold-days 252 `
-  --ntfy-topic $env:NTFY_TOPIC `
-  --ntfy-limit 1 `
-  --ntfy-token $env:NTFY_TOKEN
+$ntfyTopic = "trading-ai-spy-alerts"
+$ntfyToken = ""           # Optional bearer token if topic is protected
+$twilioSid = ""           # Leave blank unless SMS via Twilio is needed
+$twilioToken = ""
+$twilioFrom = ""
+$notifyPhone = ""         # Destination phone number for SMS alerts (e.g., +15551234567)
+
+$notifyArg = if ($notifyPhone) { "--notify-phone `"$notifyPhone`"" } else { "" }
+
+$command = @"
+export NTFY_TOPIC='$ntfyTopic';
+export NTFY_TOKEN='$ntfyToken';
+export TWILIO_ACCOUNT_SID='$twilioSid';
+export TWILIO_AUTH_TOKEN='$twilioToken';
+export TWILIO_FROM_NUMBER='$twilioFrom';
+cd "$projectRootWSL";
+source .venv-linux/bin/activate;
+python src/pipeline.py --symbol SPY --years 20 --prob-threshold 0.55 --min-hold-days 252 --portfolio "$portfolioPathWSL" --portfolio-update --ntfy-topic "$ntfyTopic" --ntfy-limit 1 --ntfy-token "$ntfyToken" $notifyArg;
+"@
+
+wsl.exe -d $distribution --cd "$projectRootWSL" bash -lc "$command"

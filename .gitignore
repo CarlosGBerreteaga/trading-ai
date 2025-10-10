@@ -7,6 +7,7 @@ __pycache__/
 
 # Environments & build
 .venv/
+.venv-linux/
 venv/
 env/
 build/
@@ -17,3 +18,5 @@ dist/
 data/*.parquet
 data/*_backtest.csv
 models/
+portfolio.json
+data/simulations/

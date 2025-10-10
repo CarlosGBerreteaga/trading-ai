@@ -1,0 +1,164 @@
+{
+  "initial_capital": 1000.0,
+  "final_capital": 62349.7609938568,
+  "return_pct": 6134.97609938568,
+  "selected_symbol": "AMZN",
+  "per_symbol": [
+    {
+      "symbol": "AMZN",
+      "initial": 1000.0,
+      "final": 62349.7609938568,
+      "return_pct": 6134.97609938568,
+      "CAGR": 0.24209198508047414,
+      "Sharpe": 0.9515304197771187,
+      "MaxDD": -0.4006843204923405,
+      "alerts_csv": "data/AMZN_alerts.csv",
+      "backtest_csv": "data/AMZN_backtest.csv"
+    }
+  ],
+  "trade_summary": {
+    "count": 10,
+    "wins": 9,
+    "losses": 1,
+    "win_rate": 90.0,
+    "avg_win": 7048.569767720472,
+    "avg_loss": -2087.366915627448,
+    "total_profit": 61349.7609938568,
+    "avg_hold_days": 362.1,
+    "median_hold_days": 367.0,
+    "max_hold_days": 421.0
+  },
+  "trades": [
+    {
+      "symbol": "AMZN",
+      "entry_date": "2006-10-10T00:00:00",
+      "exit_date": "2007-10-12T00:00:00",
+      "entry_price": 1.63100004196167,
+      "exit_price": 4.618500232696533,
+      "shares": 613.1207690204958,
+      "profit": 1831.6984143922373,
+      "return_pct": 183.16984143922372,
+      "hold_days": 367
+    },
+    {
+      "symbol": "AMZN",
+      "entry_date": "2008-10-14T00:00:00",
+      "exit_date": "2009-10-14T00:00:00",
+      "entry_price": 2.7929999828338623,
+      "exit_price": 4.873000144958496,
+      "shares": 1013.8555072668172,
+      "profit": 2108.819619485933,
+      "return_pct": 74.47190028315728,
+      "hold_days": 365
+    },
+    {
+      "symbol": "AMZN",
+      "entry_date": "2010-10-19T00:00:00",
+      "exit_date": "2011-10-18T00:00:00",
+      "entry_price": 7.933499813079834,
+      "exit_price": 12.194000244140623,
+      "shares": 622.7413058903484,
+      "profit": 2653.189602185188,
+      "return_pct": 53.70266000430946,
+      "hold_days": 364
+    },
+    {
+      "symbol": "AMZN",
+      "entry_date": "2012-10-22T00:00:00",
+      "exit_date": "2013-10-24T00:00:00",
+      "entry_price": 11.689000129699709,
+      "exit_price": 16.61050033569336,
+      "shares": 649.645611412825,
+      "profit": 3197.2310103910895,
+      "return_pct": 42.10368852241671,
+      "hold_days": 367
+    },
+    {
+      "symbol": "AMZN",
+      "entry_date": "2014-10-24T00:00:00",
+      "exit_date": "2015-10-26T00:00:00",
+      "entry_price": 14.352999687194824,
+      "exit_price": 30.43050003051757,
+      "shares": 751.8246277174865,
+      "profit": 12087.460710246385,
+      "return_pct": 112.01491460817388,
+      "hold_days": 367
+    },
+    {
+      "symbol": "AMZN",
+      "entry_date": "2016-10-28T00:00:00",
+      "exit_date": "2017-10-30T00:00:00",
+      "entry_price": 38.81600189208984,
+      "exit_price": 55.54249954223633,
+      "shares": 589.40638503429,
+      "profit": 9858.704514257388,
+      "return_pct": 43.09175812760644,
+      "hold_days": 367
+    },
+    {
+      "symbol": "AMZN",
+      "entry_date": "2018-10-30T00:00:00",
+      "exit_date": "2019-12-02T00:00:00",
+      "entry_price": 76.52100372314453,
+      "exit_price": 89.08000183105469,
+      "shares": 427.8185371091331,
+      "profit": 5372.972198082491,
+      "return_pct": 16.41248480397489,
+      "hold_days": 398
+    },
+    {
+      "symbol": "AMZN",
+      "entry_date": "2020-12-10T00:00:00",
+      "exit_date": "2022-02-04T00:00:00",
+      "entry_price": 155.07449340820312,
+      "exit_price": 157.63949584960938,
+      "shares": 245.75334880329692,
+      "profit": 630.3579396642162,
+      "return_pct": 1.6540453462287865,
+      "hold_days": 421
+    },
+    {
+      "symbol": "AMZN",
+      "entry_date": "2023-02-07T00:00:00",
+      "exit_date": "2024-02-08T00:00:00",
+      "entry_price": 102.11000061035156,
+      "exit_price": 169.83999633789062,
+      "shares": 379.3990184814234,
+      "profit": 25696.69390077932,
+      "return_pct": 66.33042338917862,
+      "hold_days": 366
+    },
+    {
+      "symbol": "AMZN",
+      "entry_date": "2025-02-11T00:00:00",
+      "exit_date": "2025-10-08T00:00:00",
+      "entry_price": 232.759994506836,
+      "exit_price": 225.22000122070312,
+      "shares": 276.83935998542813,
+      "profit": -2087.366915627448,
+      "return_pct": -3.2393854030235527,
+      "hold_days": 239
+    }
+  ],
+  "leaderboard": [
+    {
+      "symbol": "AMZN",
+      "status": "ok",
+      "equity": 61.03216756114712,
+      "total_return_pct": 6003.216756114712,
+      "CAGR": 0.24209198508047414,
+      "Sharpe": 0.9515304197771187,
+      "MaxDD": -0.4006843204923405,
+      "Vol": 0.26353506576887736,
+      "backtest_csv": "data/AMZN_backtest.csv",
+      "alerts_csv": "data/AMZN_alerts.csv",
+      "trading_days": 4779,
+      "latest_action": "HOLD",
+      "latest_action_date": "2025-10-08T00:00:00",
+      "latest_probability": 0.7022174847033402,
+      "latest_signal": 1.0,
+      "previous_signal": 1.0,
+      "final_value_est": 61032.16756114712
+    }
+  ]
+}
