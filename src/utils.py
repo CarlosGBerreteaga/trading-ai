@@ -1,44 +1,14 @@
+@'
 from __future__ import annotations
-
-from typing import Hashable
-
 import pandas as pd
+import numpy as np
 
-
-def ensure_ts_index(df: pd.DataFrame, date_col: Hashable | None = None) -> pd.DataFrame:
-    """Return a DataFrame indexed by a timestamp column.
-
-    If ``date_col`` is provided, the function coerces the column to datetime,
-    dropping invalid values before sorting and deduplicating. If ``date_col`` is
-    omitted, the function looks for a ``Date`` column or an existing
-    ``DatetimeIndex``.
-    """
-    if date_col is None:
-        if isinstance(df.index, pd.DatetimeIndex):
-            result = df.copy()
-            if getattr(result.index, "tz", None) is not None:
-                result.index = result.index.tz_localize(None)
-            result = result.sort_index()
-            result = result[~result.index.duplicated(keep="last")]
-            return result
-        if "Date" in df.columns:
-            date_col = "Date"
-        else:
-            raise ValueError("No datetime column or index found; specify date_col")
-
-    if date_col not in df.columns:
-        raise ValueError(f"DataFrame missing required column: {date_col}")
-
-    result = df.copy()
-    result[date_col] = pd.to_datetime(result[date_col], errors="coerce")
-    result = result.dropna(subset=[date_col])
-    if result.empty:
-        raise ValueError("No valid timestamps after coercion")
-
-    result = result.sort_values(date_col)
-    result = result.drop_duplicates(subset=[date_col], keep="last")
-    result = result.set_index(date_col)
-    if getattr(result.index, "tz", None) is not None:
-        result.index = result.index.tz_localize(None)
-
-    return result
+def ensure_ts_index(df: pd.DataFrame, date_col: str = "Date") -> pd.DataFrame:
+    if date_col in df.columns:
+        df = df.copy()
+        df[date_col] = pd.to_datetime(df[date_col], utc=False)
+        df = df.sort_values(date_col).set_index(date_col)
+    if not isinstance(df.index, pd.DatetimeIndex):
+        raise ValueError("DataFrame must have a DatetimeIndex or a 'Date' column.")
+    return df
+'@ | Set-Content src\utils.py
